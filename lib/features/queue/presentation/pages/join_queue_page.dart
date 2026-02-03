@@ -82,23 +82,31 @@ class _JoinQueuePageState extends State<JoinQueuePage> {
         ],
       ),
       body: BlocListener<QueueBloc, QueueState>(
+        listenWhen: (previous, current) =>
+            previous is! QueueJoined && current is QueueJoined,
         listener: (context, state) {
           if (state is QueueJoined) {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const QueueStatusPage()),
             );
-          } else if (state is QueueError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
           }
         },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextField(
+        child: BlocListener<QueueBloc, QueueState>(
+          listenWhen: (previous, current) =>
+              previous is! QueueError && current is QueueError,
+          listener: (context, state) {
+            if (state is QueueError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message)),
+              );
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextField(
                 controller: _businessIdController,
                 decoration: const InputDecoration(
                   labelText: 'Business ID',
@@ -134,6 +142,7 @@ class _JoinQueuePageState extends State<JoinQueuePage> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
