@@ -1,0 +1,74 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/queue_bloc.dart';
+
+class QueueStatusPage extends StatelessWidget {
+  const QueueStatusPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Queue Status'),
+        automaticallyImplyLeading: false, // Don't show back button automatically
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            tooltip: 'Leave Queue',
+            onPressed: () {
+               context.read<QueueBloc>().add(StopQueuePolling());
+               Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+      body: Center(
+        child: BlocBuilder<QueueBloc, QueueState>(
+          builder: (context, state) {
+            if (state is QueueJoined) {
+              return Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Your Position',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '${state.position}',
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(state.status),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else if (state is QueueError) {
+              return Center(child: Text('Error: ${state.message}'));
+            } else if (state is QueueLoading) {
+               return const CircularProgressIndicator();
+            }
+
+             return const Center(child: Text('Waiting for status update...'));
+          },
+        ),
+      ),
+    );
+  }
+}
