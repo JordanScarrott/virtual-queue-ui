@@ -28,6 +28,27 @@ final class QueueJoined extends QueueState {
   List<Object> get props => [position, status, businessId, userId];
 }
 
+final class QueueCreated extends QueueState {
+  final String businessId;
+
+  const QueueCreated(this.businessId);
+
+  @override
+  List<Object> get props => [businessId];
+}
+
+final class QueueInfoLoaded extends QueueState {
+  final Map<String, dynamic> queueInfo;
+  final String businessId;
+
+  const QueueInfoLoaded(this.queueInfo, this.businessId);
+
+  @override
+  List<Object> get props => [queueInfo, businessId];
+}
+
+final class QueueLeft extends QueueState {}
+
 final class QueueError extends QueueState {
   final String message;
 

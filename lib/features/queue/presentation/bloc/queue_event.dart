@@ -17,6 +17,34 @@ class JoinQueue extends QueueEvent {
   List<Object> get props => [businessId, userId];
 }
 
+class CreateQueue extends QueueEvent {
+  final String businessId;
+
+  const CreateQueue(this.businessId);
+
+  @override
+  List<Object> get props => [businessId];
+}
+
+class LeaveQueue extends QueueEvent {
+  final String? businessId;
+  final String? userId;
+
+  const LeaveQueue({this.businessId, this.userId});
+
+  @override
+  List<Object> get props => [businessId ?? '', userId ?? ''];
+}
+
+class CheckQueue extends QueueEvent {
+  final String businessId;
+
+  const CheckQueue(this.businessId);
+
+  @override
+  List<Object> get props => [businessId];
+}
+
 class PollQueueStatus extends QueueEvent {
   const PollQueueStatus();
 }

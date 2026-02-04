@@ -14,6 +14,9 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
     on<JoinQueue>(_onJoinQueue);
     on<PollQueueStatus>(_onPollQueueStatus);
     on<StopQueuePolling>(_onStopQueuePolling);
+    on<CreateQueue>(_onCreateQueue);
+    on<LeaveQueue>(_onLeaveQueue);
+    on<CheckQueue>(_onCheckQueue);
   }
 
   Future<void> _onJoinQueue(JoinQueue event, Emitter<QueueState> emit) async {
@@ -30,6 +33,65 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
         userId: event.userId,
       ));
       _startPolling();
+    } catch (e) {
+      emit(QueueError(e.toString()));
+    }
+  }
+
+  Future<void> _onCreateQueue(CreateQueue event, Emitter<QueueState> emit) async {
+    emit(QueueLoading());
+    try {
+      await repository.createQueue(event.businessId);
+      emit(QueueCreated(event.businessId));
+    } catch (e) {
+      emit(QueueError(e.toString()));
+    }
+  }
+
+  Future<void> _onLeaveQueue(LeaveQueue event, Emitter<QueueState> emit) async {
+    final currentState = state;
+    String? businessId = event.businessId;
+    String? userId = event.userId;
+
+    if (businessId == null || userId == null) {
+      if (currentState is QueueJoined) {
+        businessId ??= currentState.businessId;
+        userId ??= currentState.userId;
+      }
+    }
+
+    if (businessId != null && userId != null) {
+      emit(QueueLoading());
+      try {
+        await repository.leaveQueue(
+          businessId: businessId,
+          userId: userId,
+        );
+        _stopPolling();
+        emit(QueueLeft());
+      } catch (e) {
+        emit(QueueError(e.toString()));
+        // If we were joined and failed to leave, verify if we should restore state
+        if (currentState is QueueJoined) {
+           emit(QueueJoined(
+            position: currentState.position,
+            status: currentState.status,
+            businessId: currentState.businessId,
+            userId: currentState.userId,
+          ));
+          _startPolling();
+        }
+      }
+    } else {
+      emit(const QueueError('Cannot leave queue: Missing Business ID or User ID'));
+    }
+  }
+
+  Future<void> _onCheckQueue(CheckQueue event, Emitter<QueueState> emit) async {
+    emit(QueueLoading());
+    try {
+      final result = await repository.getQueue(event.businessId);
+      emit(QueueInfoLoaded(result, event.businessId));
     } catch (e) {
       emit(QueueError(e.toString()));
     }
@@ -57,8 +119,7 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
   }
 
   void _onStopQueuePolling(StopQueuePolling event, Emitter<QueueState> emit) {
-    _pollingTimer?.cancel();
-    _pollingTimer = null;
+    _stopPolling();
     emit(QueueInitial());
   }
 
@@ -69,9 +130,14 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
     });
   }
 
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
   @override
   Future<void> close() {
-    _pollingTimer?.cancel();
+    _stopPolling();
     return super.close();
   }
 }

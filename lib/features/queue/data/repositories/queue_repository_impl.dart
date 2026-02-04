@@ -34,4 +34,41 @@ class QueueRepositoryImpl implements QueueRepository {
       throw Exception('Failed to get queue status: $e');
     }
   }
+
+  @override
+  Future<void> createQueue(String businessId) async {
+    try {
+      await networkClient.dio.post(
+        '/queues/$businessId',
+      );
+    } catch (e) {
+      throw Exception('Failed to create queue: $e');
+    }
+  }
+
+  @override
+  Future<void> leaveQueue({required String businessId, required String userId}) async {
+    try {
+      await networkClient.dio.post(
+        '/queues/$businessId/leave',
+        data: {
+          'userID': userId,
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to leave queue: $e');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getQueue(String businessId) async {
+    try {
+      final response = await networkClient.dio.get(
+        '/queues/$businessId',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to get queue info: $e');
+    }
+  }
 }

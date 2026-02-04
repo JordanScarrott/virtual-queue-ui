@@ -68,11 +68,31 @@ class _JoinQueuePageState extends State<JoinQueuePage> {
     );
   }
 
+  void _showQueueInfoDialog(BuildContext context, Map<String, dynamic> info) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Queue Info'),
+          content: SingleChildScrollView(
+            child: Text(info.toString()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Red Duck - Join Queue'),
+        title: const Text('Red Duck - Queue Manager'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -82,31 +102,33 @@ class _JoinQueuePageState extends State<JoinQueuePage> {
         ],
       ),
       body: BlocListener<QueueBloc, QueueState>(
-        listenWhen: (previous, current) =>
-            previous is! QueueJoined && current is QueueJoined,
         listener: (context, state) {
           if (state is QueueJoined) {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const QueueStatusPage()),
             );
+          } else if (state is QueueError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          } else if (state is QueueCreated) {
+             ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Queue "${state.businessId}" created successfully!')),
+            );
+          } else if (state is QueueInfoLoaded) {
+            _showQueueInfoDialog(context, state.queueInfo);
+          } else if (state is QueueLeft) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Left queue successfully')),
+            );
           }
         },
-        child: BlocListener<QueueBloc, QueueState>(
-          listenWhen: (previous, current) =>
-              previous is! QueueError && current is QueueError,
-          listener: (context, state) {
-            if (state is QueueError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextField(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
                 controller: _businessIdController,
                 decoration: const InputDecoration(
                   labelText: 'Business ID',
@@ -120,29 +142,100 @@ class _JoinQueuePageState extends State<JoinQueuePage> {
                   if (state is QueueLoading) {
                     return const CircularProgressIndicator();
                   }
-                  return ElevatedButton(
-                    onPressed: () {
-                      final businessId = _businessIdController.text;
-                      if (businessId.isNotEmpty) {
-                        context.read<QueueBloc>().add(
-                              JoinQueue(
-                                businessId: businessId,
-                                userId: _userId,
+                  return Column(
+                    children: [
+                       SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final businessId = _businessIdController.text;
+                            if (businessId.isNotEmpty) {
+                              context.read<QueueBloc>().add(
+                                    JoinQueue(
+                                      businessId: businessId,
+                                      userId: _userId,
+                                    ),
+                                  );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.all(16),
+                          ),
+                          child: const Text('Join Queue'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                final businessId = _businessIdController.text;
+                                if (businessId.isNotEmpty) {
+                                  context.read<QueueBloc>().add(
+                                    CreateQueue(businessId),
+                                  );
+                                }
+                              },
+                               style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.all(16),
                               ),
-                            );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    ),
-                    child: const Text('Join Queue'),
+                              child: const Text('Create Queue'),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                final businessId = _businessIdController.text;
+                                if (businessId.isNotEmpty) {
+                                  context.read<QueueBloc>().add(
+                                    CheckQueue(businessId),
+                                  );
+                                }
+                              },
+                               style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.all(16),
+                              ),
+                              child: const Text('Check Status'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            final businessId = _businessIdController.text;
+                            if (businessId.isNotEmpty) {
+                              context.read<QueueBloc>().add(
+                                    LeaveQueue(
+                                      businessId: businessId,
+                                      userId: _userId,
+                                    ),
+                                  );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter Business ID')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.exit_to_app),
+                          label: const Text('Leave Queue (with current User ID)'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[700],
+                            padding: const EdgeInsets.all(16),
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
             ],
           ),
         ),
-      ),
       ),
     );
   }
