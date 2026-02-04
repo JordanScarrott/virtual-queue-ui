@@ -12,10 +12,9 @@ class QueueRepositoryImpl implements QueueRepository {
   Future<QueueStatus> joinQueue({required String businessId, required String userId}) async {
     try {
       final response = await networkClient.dio.post(
-        '/queue/join',
+        '/queues/$businessId/join',
         data: {
-          'business_id': businessId,
-          'user_id': userId,
+          'userID': userId,
         },
       );
       return QueueStatusModel.fromJson(response.data);
@@ -28,7 +27,7 @@ class QueueRepositoryImpl implements QueueRepository {
   Future<QueueStatus> getQueueStatus({required String businessId, required String userId}) async {
     try {
       final response = await networkClient.dio.get(
-        '/queue/status/$businessId/$userId',
+        '/queues/$businessId/status/$userId',
       );
       return QueueStatusModel.fromJson(response.data);
     } catch (e) {
