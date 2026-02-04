@@ -50,3 +50,12 @@ class PollQueueStatus extends QueueEvent {
 }
 
 class StopQueuePolling extends QueueEvent {}
+
+class UpdateQueueStatus extends QueueEvent {
+  final QueueStatus status;
+
+  const UpdateQueueStatus(this.status);
+
+  @override
+  List<Object> get props => [status];
+}
