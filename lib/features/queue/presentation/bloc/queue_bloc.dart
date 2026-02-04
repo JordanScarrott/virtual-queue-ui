@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:red_duck/features/queue/domain/entities/queue_status.dart';
+import 'package:red_duck/services/realtime_client.dart';
 import '../../domain/repositories/queue_repository.dart';
 
 part 'queue_event.dart';
@@ -8,11 +10,15 @@ part 'queue_state.dart';
 
 class QueueBloc extends Bloc<QueueEvent, QueueState> {
   final QueueRepository repository;
-  Timer? _pollingTimer;
+  final RealtimeClient realtimeClient;
+  StreamSubscription<QueueStatus>? _queueSubscription;
 
-  QueueBloc({required this.repository}) : super(QueueInitial()) {
+  QueueBloc({
+    required this.repository,
+    required this.realtimeClient,
+  }) : super(QueueInitial()) {
     on<JoinQueue>(_onJoinQueue);
-    on<PollQueueStatus>(_onPollQueueStatus);
+    on<UpdateQueueStatus>(_onUpdateQueueStatus);
     on<StopQueuePolling>(_onStopQueuePolling);
     on<CreateQueue>(_onCreateQueue);
     on<LeaveQueue>(_onLeaveQueue);
@@ -32,9 +38,21 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
         businessId: event.businessId,
         userId: event.userId,
       ));
-      _startPolling();
+      _subscribeToQueue(event.businessId);
     } catch (e) {
       emit(QueueError(e.toString()));
+    }
+  }
+
+  void _onUpdateQueueStatus(UpdateQueueStatus event, Emitter<QueueState> emit) {
+    final currentState = state;
+    if (currentState is QueueJoined) {
+      emit(QueueJoined(
+        position: event.status.position,
+        status: event.status.status,
+        businessId: currentState.businessId,
+        userId: currentState.userId,
+      ));
     }
   }
 
@@ -67,7 +85,7 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
           businessId: businessId,
           userId: userId,
         );
-        _stopPolling();
+        _stopListening();
         emit(QueueLeft());
       } catch (e) {
         emit(QueueError(e.toString()));
@@ -79,7 +97,7 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
             businessId: currentState.businessId,
             userId: currentState.userId,
           ));
-          _startPolling();
+          _subscribeToQueue(currentState.businessId);
         }
       }
     } else {
@@ -97,47 +115,31 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
     }
   }
 
-  Future<void> _onPollQueueStatus(PollQueueStatus event, Emitter<QueueState> emit) async {
-    final state = this.state;
-    if (state is QueueJoined) {
-      try {
-        final result = await repository.getQueueStatus(
-          businessId: state.businessId,
-          userId: state.userId,
-        );
-        emit(QueueJoined(
-          position: result.position,
-          status: result.status,
-          businessId: state.businessId,
-          userId: state.userId,
-        ));
-      } catch (e) {
-        // Log error but maintain state for resilience
-        print('Polling error: $e');
-      }
-    }
-  }
-
   void _onStopQueuePolling(StopQueuePolling event, Emitter<QueueState> emit) {
-    _stopPolling();
+    _stopListening();
     emit(QueueInitial());
   }
 
-  void _startPolling() {
-    _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      add(const PollQueueStatus());
-    });
+  void _subscribeToQueue(String businessId) {
+    _queueSubscription?.cancel();
+    _queueSubscription = realtimeClient.subscribeToQueue(businessId).listen(
+      (status) {
+        add(UpdateQueueStatus(status));
+      },
+      onError: (error) {
+        print('Queue subscription error: $error');
+      },
+    );
   }
 
-  void _stopPolling() {
-    _pollingTimer?.cancel();
-    _pollingTimer = null;
+  void _stopListening() {
+    _queueSubscription?.cancel();
+    _queueSubscription = null;
   }
 
   @override
   Future<void> close() {
-    _stopPolling();
+    _stopListening();
     return super.close();
   }
 }
