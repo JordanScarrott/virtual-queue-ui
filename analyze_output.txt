@@ -1,0 +1,5 @@
+Analyzing app...
+
+   info • Don't invoke 'print' in production code • lib/features/queue/presentation/bloc/queue_bloc.dart:54:9 • avoid_print
+
+1 issue found. (ran in 2.5s)
