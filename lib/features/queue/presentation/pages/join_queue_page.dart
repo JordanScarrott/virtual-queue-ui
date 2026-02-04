@@ -117,6 +117,10 @@ class _JoinQueuePageState extends State<JoinQueuePage> {
             );
           } else if (state is QueueInfoLoaded) {
             _showQueueInfoDialog(context, state.queueInfo);
+          } else if (state is QueueLeft) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Left queue successfully')),
+            );
           }
         },
         child: Padding(
@@ -197,6 +201,33 @@ class _JoinQueuePageState extends State<JoinQueuePage> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            final businessId = _businessIdController.text;
+                            if (businessId.isNotEmpty) {
+                              context.read<QueueBloc>().add(
+                                    LeaveQueue(
+                                      businessId: businessId,
+                                      userId: _userId,
+                                    ),
+                                  );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter Business ID')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.exit_to_app),
+                          label: const Text('Leave Queue (with current User ID)'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[700],
+                            padding: const EdgeInsets.all(16),
+                          ),
+                        ),
                       ),
                     ],
                   );

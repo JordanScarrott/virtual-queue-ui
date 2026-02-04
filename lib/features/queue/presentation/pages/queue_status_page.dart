@@ -22,7 +22,9 @@ class QueueStatusPage extends StatelessWidget {
               icon: const Icon(Icons.exit_to_app),
               tooltip: 'Leave Queue',
               onPressed: () {
-                 context.read<QueueBloc>().add(LeaveQueue());
+                 // We can rely on state here, but passing args is also fine if we had them.
+                 // Since we are in QueueJoined state, the bloc will use the state values.
+                 context.read<QueueBloc>().add(const LeaveQueue());
               },
             ),
           ],
@@ -64,7 +66,10 @@ class QueueStatusPage extends StatelessWidget {
                       const SizedBox(height: 32),
                       ElevatedButton.icon(
                         onPressed: () {
-                          context.read<QueueBloc>().add(LeaveQueue());
+                          context.read<QueueBloc>().add(LeaveQueue(
+                            businessId: state.businessId,
+                            userId: state.userId
+                          ));
                         },
                         icon: const Icon(Icons.exit_to_app),
                         label: const Text('Leave Queue'),

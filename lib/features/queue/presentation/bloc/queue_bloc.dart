@@ -50,27 +50,40 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
 
   Future<void> _onLeaveQueue(LeaveQueue event, Emitter<QueueState> emit) async {
     final currentState = state;
-    if (currentState is QueueJoined) {
+    String? businessId = event.businessId;
+    String? userId = event.userId;
+
+    if (businessId == null || userId == null) {
+      if (currentState is QueueJoined) {
+        businessId ??= currentState.businessId;
+        userId ??= currentState.userId;
+      }
+    }
+
+    if (businessId != null && userId != null) {
       emit(QueueLoading());
       try {
         await repository.leaveQueue(
-          businessId: currentState.businessId,
-          userId: currentState.userId,
+          businessId: businessId,
+          userId: userId,
         );
         _stopPolling();
         emit(QueueLeft());
       } catch (e) {
         emit(QueueError(e.toString()));
-        // If error, should we go back to joined?
-        // Let's go back to joined to allow retry
-         emit(QueueJoined(
-          position: currentState.position,
-          status: currentState.status,
-          businessId: currentState.businessId,
-          userId: currentState.userId,
-        ));
-        _startPolling();
+        // If we were joined and failed to leave, verify if we should restore state
+        if (currentState is QueueJoined) {
+           emit(QueueJoined(
+            position: currentState.position,
+            status: currentState.status,
+            businessId: currentState.businessId,
+            userId: currentState.userId,
+          ));
+          _startPolling();
+        }
       }
+    } else {
+      emit(const QueueError('Cannot leave queue: Missing Business ID or User ID'));
     }
   }
 

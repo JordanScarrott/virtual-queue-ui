@@ -26,7 +26,15 @@ class CreateQueue extends QueueEvent {
   List<Object> get props => [businessId];
 }
 
-class LeaveQueue extends QueueEvent {}
+class LeaveQueue extends QueueEvent {
+  final String? businessId;
+  final String? userId;
+
+  const LeaveQueue({this.businessId, this.userId});
+
+  @override
+  List<Object> get props => [businessId ?? '', userId ?? ''];
+}
 
 class CheckQueue extends QueueEvent {
   final String businessId;
