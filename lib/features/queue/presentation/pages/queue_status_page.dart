@@ -61,6 +61,18 @@ class QueueStatusPage extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 32),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          context.read<QueueBloc>().add(LeaveQueue());
+                        },
+                        icon: const Icon(Icons.exit_to_app),
+                        label: const Text('Leave Queue'),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                      ),
                     ],
                   ),
                 );
