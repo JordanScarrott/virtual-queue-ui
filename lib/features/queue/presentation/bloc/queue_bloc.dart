@@ -113,7 +113,7 @@ class QueueBloc extends Bloc<QueueEvent, QueueState> {
         ));
       } catch (e) {
         // Log error but maintain state for resilience
-        print('Polling error: $e');
+        // print('Polling error: $e');
       }
     }
   }
