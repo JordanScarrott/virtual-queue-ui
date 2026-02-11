@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/queue_bloc.dart';
+import 'package:provider/provider.dart';
+import '../../providers/queue_provider.dart';
 
 class ActiveTicketScreen extends StatefulWidget {
   final int position;
@@ -39,8 +39,10 @@ class _ActiveTicketScreenState extends State<ActiveTicketScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    // Estimate wait time: 2 minutes per person ahead
-    final waitTime = widget.position * 2;
+    // Consume provider for real-time updates
+    final provider = context.watch<QueueProvider>();
+    final position = provider.status?.userPosition ?? widget.position;
+    final waitTime = provider.status?.userEstimatedWaitMinutes ?? (position * 5); // Fallback: 5 min per person
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6F6),
@@ -128,7 +130,7 @@ class _ActiveTicketScreenState extends State<ActiveTicketScreen> with SingleTick
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      widget.position.toString().padLeft(2, '0'),
+                      position > 0 ? position.toString().padLeft(2, '0') : '--', // Fallback when position is unknown
                       style: const TextStyle(
                         fontSize: 140,
                         fontWeight: FontWeight.w900,
@@ -204,7 +206,7 @@ class _ActiveTicketScreenState extends State<ActiveTicketScreen> with SingleTick
                     child: _buildInfoCard(
                       icon: Icons.group,
                       label: 'Ahead',
-                      value: '${widget.position - 1} People',
+                      value: '${position > 0 ? position - 1 : 0} People',
                     ),
                   ),
                 ],
@@ -268,12 +270,8 @@ class _ActiveTicketScreenState extends State<ActiveTicketScreen> with SingleTick
                         onChangeEnd: (value) {
                           if (value > 0.9) {
                             // Trigger leave
-                            context.read<QueueBloc>().add(
-                              LeaveQueue(
-                                businessId: widget.businessId,
-                                userId: widget.userId,
-                              ),
-                            );
+                            context.read<QueueProvider>().leaveQueue();
+                            // Provider state change will trigger AuthWrapper rebuild and navigation
                           } else {
                             // Reset
                             setState(() {

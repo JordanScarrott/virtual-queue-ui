@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uuid/uuid.dart';
-import '../bloc/queue_bloc.dart';
+import 'package:provider/provider.dart';
+import '../../providers/queue_provider.dart';
 
 class JoinQueueScreen extends StatefulWidget {
   final VoidCallback onSettingsPressed;
@@ -99,169 +98,186 @@ class _JoinQueueScreenState extends State<JoinQueueScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 16),
-                    const Text(
-                      'The Burger Joint',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '1.2km • American Diner',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Wait Time Display
-                    const Text(
-                      'CURRENT WAIT',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        const Text(
-                          '12',
-                          style: TextStyle(
-                            fontSize: 96,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF111827),
-                            height: 0.9,
-                          ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 16),
+                      const Text(
+                        'The Burger Joint',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'min',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.orange[100]!),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 8),
+                      const Text(
+                        '1.2km • American Diner',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+  
+                      // Wait Time Display - Static for now or fetch global
+                      const Text(
+                        'CURRENT WAIT',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
                         children: [
-                          Icon(Icons.schedule, size: 18, color: Colors.orange[800]),
+                          Consumer<QueueProvider>(
+                            builder: (context, provider, _) {
+                              // If we have stats, use them, else placeholder
+                              return Text(
+                                provider.status != null ? '${provider.status!.estimatedWaitMinutes}' : '12',
+                                style: const TextStyle(
+                                  fontSize: 96,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF111827),
+                                  height: 0.9,
+                                ),
+                              );
+                            }
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            'Queue closes at 5:00 PM',
+                            'min',
                             style: TextStyle(
-                              color: Colors.orange[800],
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              color: Colors.grey[400],
                             ),
                           ),
                         ],
                       ),
-                    ),
-
-                    const Spacer(),
-
-                    // Business ID Input (Added for functionality)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: TextField(
-                        controller: _businessIdController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter Business ID (Optional)',
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.orange[100]!),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Join Queue Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 64,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Use entered ID or default if empty (for demo)
-                          final businessId = _businessIdController.text.isNotEmpty
-                              ? _businessIdController.text
-                              : 'burger-joint';
-
-                          // Using Uuid package for userId generation
-                          final userId = const Uuid().v4();
-
-                          context.read<QueueBloc>().add(
-                            JoinQueue(
-                              businessId: businessId,
-                              userId: userId,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEC5413), // Primary Orange
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                          elevation: 8,
-                          shadowColor: const Color(0xFFEC5413).withValues(alpha: 0.4),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            Icon(Icons.schedule, size: 18, color: Colors.orange[800]),
+                            const SizedBox(width: 8),
                             Text(
-                              'JOIN QUEUE',
+                              'Queue closes at 5:00 PM',
                               style: TextStyle(
-                                fontSize: 18,
+                                color: Colors.orange[800],
                                 fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                                color: Colors.white,
+                                fontSize: 12,
                               ),
                             ),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, color: Colors.white),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'By joining, you agree to our Terms of Service',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
+  
+                      const SizedBox(height: 32), // Spacer replaced with fixed size to allow scrolling
+  
+                      // Business ID Input (Added for functionality)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: TextField(
+                          controller: _businessIdController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter Business ID (Optional)',
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                      const SizedBox(height: 16),
+  
+                      // Join Queue Button
+                      Consumer<QueueProvider>(
+                        builder: (context, provider, child) {
+                          if (provider.isLoading) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 64,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final businessId = _businessIdController.text.isNotEmpty
+                                    ? _businessIdController.text
+                                    : 'barbershop-1'; // Default updated to match known ID
+  
+                                context.read<QueueProvider>().joinQueue(businessId);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFEC5413), // Primary Orange
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(32),
+                                ),
+                                elevation: 8,
+                                shadowColor: const Color(0xFFEC5413).withValues(alpha: 0.4),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'JOIN QUEUE',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.5,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward, color: Colors.white),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      
+                      if (context.watch<QueueProvider>().error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            context.watch<QueueProvider>().error!,
+                            style: const TextStyle(color: Colors.red, fontSize: 12),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        
+                      const SizedBox(height: 16),
+                      const Text(
+                        'By joining, you agree to our Terms of Service',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
             ),

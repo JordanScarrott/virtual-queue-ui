@@ -1,50 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'core/network/dio_client.dart';
-import 'features/queue/data/repositories/queue_repository_impl.dart';
-import 'features/queue/domain/repositories/queue_repository.dart';
-import 'features/queue/presentation/bloc/queue_bloc.dart';
-import 'features/queue/presentation/pages/join_queue_page.dart';
+import 'package:provider/provider.dart';
+import 'features/queue/data/queue_repository.dart';
+import 'features/queue/providers/queue_provider.dart';
+import 'features/queue/presentation/pages/join_queue_screen.dart';
+import 'features/queue/presentation/pages/active_ticket_screen.dart';
 
 void main() {
   runApp(const RedDuckApp());
 }
 
-class RedDuckApp extends StatefulWidget {
+class RedDuckApp extends StatelessWidget {
   const RedDuckApp({super.key});
 
   @override
-  State<RedDuckApp> createState() => _RedDuckAppState();
-}
-
-class _RedDuckAppState extends State<RedDuckApp> {
-  final NetworkClient _networkClient = NetworkClient(useLocalhost: true);
-
-  @override
   Widget build(BuildContext context) {
-    return MultiRepositoryProvider(
+    return MultiProvider(
       providers: [
-        RepositoryProvider<NetworkClient>.value(value: _networkClient),
-        RepositoryProvider<QueueRepository>(
-          create: (context) => QueueRepositoryImpl(
-            networkClient: context.read<NetworkClient>(),
-          ),
+        ChangeNotifierProvider(
+          create: (_) => QueueProvider(QueueRepository()),
         ),
       ],
-      child: BlocProvider(
-        create: (context) => QueueBloc(
-          repository: context.read<QueueRepository>(),
+      child: MaterialApp(
+        title: 'Red Duck',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFEC5413)),
+          useMaterial3: true,
+          fontFamily: 'Inter',
         ),
-        child: MaterialApp(
-          title: 'Red Duck',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
-            useMaterial3: true,
-          ),
-          home: const JoinQueuePage(),
-        ),
+        home: const AuthWrapper(),
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<QueueProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading && provider.status == null && !provider.inQueue) {
+             return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        if (provider.inQueue) {
+           // Even if status is null (e.g. backend offline), show ticket screen with basic info if possible
+           // or show loading/error. For now, assume we can show ticket.
+           // Fallback for missing status fields handles the nulls.
+          return ActiveTicketScreen(
+            position: provider.status?.userPosition ?? 0,
+            businessId: provider.businessId!,
+            userId: provider.guestId!,
+          );
+        }
+        
+        return JoinQueueScreen(
+          onSettingsPressed: () {
+            // TODO: Settings
+          },
+        );
+      },
     );
   }
 }
